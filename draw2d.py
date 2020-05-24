@@ -7,7 +7,7 @@ from math import cos, sin, pi
 import blf
 
 def lerp(a, b, t):
-    return (b * t) + (a * (1 - t))
+    return a + (b - a) * t
 
 
 def circle_point(center=(0, 0), radius=1, t=0):
