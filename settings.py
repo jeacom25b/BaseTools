@@ -7,7 +7,7 @@ class BaseToolsSettings(bpy.types.PropertyGroup):
         name='Resolution',
         description='How dense resulting BlobSketch geometry is. (higher values = more dense)',
         min=0,
-        default=5
+        default=40
     )
 
     blobsketch_quality: bpy.props.IntProperty(
