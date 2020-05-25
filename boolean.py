@@ -61,34 +61,33 @@ class Boolean(bpy.types.Operator):
             self.report(type={'ERROR_INVALID_CONTEXT'}, message='must have at least two meshes selected')
             return {'CANCELLED'}
 
-        obj2 = context.active_object
-        obj1s = [ob for ob in meshes if ob is not obj2]
+        active = context.active_object
+        targets = [ob for ob in meshes if ob is not active]
 
         if not self.operation == 'SLICE':
-            for obj1 in obj1s:
-                bool_apply_objs(obj1, obj2, self.operation)
+            for ob in targets:
+                bool_apply_objs(ob, active, self.operation)
                 if not self.ngons:
-                    remove_ngons(obj1)
+                    remove_ngons(ob)
         else:
-            obj2.select_set(False)
-            for obj in context.selected_objects:
-                if not obj.type == 'MESH':
-                    ob.select_set(False)
-            bpy.ops.object.duplicate()
-
-            obj3s = list(context.selected_objects)
-
-            for obj1 in obj1s:
-                bool_apply_objs(obj1, obj2, 'DIFFERENCE')
+            thicc = active.modifiers.new(type='SOLIDIFY', name='solid')
+            thicc.thickness = 0.00001
+            for ob in targets:
+                bool_apply_objs(ob, active, 'DIFFERENCE')
                 if not self.ngons:
-                    remove_ngons(obj1)
+                    remove_ngons(ob)
 
-            for obj3 in obj3s:
-                bool_apply_objs(obj3, obj2, 'INTERSECT')
-                if not self.ngons:
-                    remove_ngons(obj1)
+            active.select_set(False)
+            context.view_layer.objects.active = ob
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.separate(type='LOOSE')
+            bpy.ops.object.mode_set(mode='OBJECT')
+            active.select_set(True)
+            context.view_layer.objects.active = active
+
 
         if self.remove:
-            bpy.data.objects.remove(obj2)
+            bpy.data.objects.remove(active)
 
         return {'FINISHED'}

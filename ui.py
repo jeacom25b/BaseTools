@@ -30,4 +30,4 @@ class BaseTools_PT_Boolean(bpy.types.Panel):
         col.operator('base_tools.boolean', text='Union').operation = 'UNION'
         col.operator('base_tools.boolean', text='difference').operation = 'DIFFERENCE'
         col.operator('base_tools.boolean', text='intersect').operation = 'INTERSECT'
-        col.operator('base_tools.boolean', text='slice').operation = 'slice'
+        col.operator('base_tools.boolean', text='slice').operation = 'SLICE'

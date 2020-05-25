@@ -109,7 +109,7 @@ def kd_from_points(points):
     return tree
 
 
-class CursorOutOfScreen(BaseException):
+class CursorOutOfScreen(Exception):
     pass
 
 def get_cursor_plane(context):
