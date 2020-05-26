@@ -15,52 +15,53 @@ class BlobSketch(InteractiveOperator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def loop(self, context):
-        event = yield {'RUNNING_MODAL'}
-        event = yield {'RUNNING_MODAL'}
-
         points = []
+        loop_color = (1, 0, 0, 1)
+        close_loop_color = (0.5, 0.5, 0, 1)
 
-        while True:
-
-            if self.l_mouse:
-                co = self.mouse_co
-                if not points or (co - points[-1]).length > 10:
-                    points.append(co)
-                    points[-5:] = smooth_polyline(points[-5:])
-
-            self.draw.clear()
-            self.draw.add_circle(self.mouse_co, 3, 6, color=(0, 0, 0, 1))
-
-            for i in range(len(points) - 1):
-                p1 = points[i]
-                p2 = points[i + 1]
-                self.draw.add_line(p1.to_2d(), p2.to_2d(), color_a=(1, 0, 0, 1))
-
+        def draw():
             context.area.tag_redraw()
+            self.draw.clear()
+            self.draw.add_circle(self.mouse_co.xy, 6, 6, (0, 0, 0, 1))
+            for i in range(len(points) - 1):
+                p1 = points[i].xy
+                p2 = points[i + 1].xy
+                self.draw.add_line(p1, p2, loop_color)
+                if self.l_mouse:
+                    self.draw.add_line(points[0].xy, points[-1].xy, close_loop_color)
+                else:
+                    self.draw.add_line(points[0].xy, points[-1].xy, loop_color)
 
-            if self.l_mouse or self.wheel:
-                update_circles = True
+            self.draw.update_batch()
+
+        def add_point():
+            points.append(self.mouse_co)
+            points[-5:] = smooth_polyline(points[-5:])
+
+        def confirm():
+            if not points:
+                return
+            resampled = resample_loop(points, context.scene.base_tools.blobsketch_quality)
+            medial = medial_approx(list(resampled))
+            create_blob(list(medial), context)
+            points.clear()
+
+        event = yield {'RUNNING_MODAL'}
+        while True:
+            draw()
+
+            if self.l_mouse and event.type == 'MOUSEMOVE':
+                add_point()
                 event = yield {'RUNNING_MODAL'}
 
-            elif event.type == 'RET':
-                if not points:
-                    return {'CANCELLED'}
+            if event.type == 'LEFTMOUSE' and self.release:
+                confirm()
+                event = yield {'RUNNING_MODAL'}
 
-                try:
-                    create_blob(list(medial_approx(list(resample_loop(points, context.scene.base_tools.blobsketch_quality)))), context)
-                    computed_circles = []
-                    points = []
-                    return {'FINISHED'}
+            if event.type == 'ESC':
+                return {'FINISHED'}
 
-                except CursorOutOfScreen:
-                    self.report({'ERROR_INVALID_CONTEXT'}, message='Cursor must be visible for BlobSketch to work')
-                    return {'CANCELLED'}
-
-            elif event.type == 'ESC':
-                return {'CANCELLED'}
-
-            else:
-                event = yield {'PASS_THROUGH'}
+            event = yield {'PASS_THROUGH'}
 
 
 def create_blob(circles, context):
@@ -93,7 +94,6 @@ def create_blob(circles, context):
     bpy.ops.object.convert(target='MESH')
 
 
-
 def smooth_polyline(points):
     yield points[0]
     for i in range(1, len(points) - 1):
@@ -111,6 +111,7 @@ def kd_from_points(points):
 
 class CursorOutOfScreen(Exception):
     pass
+
 
 def get_cursor_plane(context):
     plane_co = context.scene.cursor.location
